@@ -1,0 +1,10 @@
+---
+- name: Install Dovecot
+  yum: pkg={{ item }} state=present
+  with_items:
+    - dovecot
+    - dovecot-pigeonhole
+    - dovecot-mysql
+
+- name: Start and enable Dovecot
+  service: name=dovecot enabled=yes state=started

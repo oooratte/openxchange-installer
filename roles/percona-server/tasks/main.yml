@@ -1,0 +1,12 @@
+---
+- name: Setup Percona RPM repository
+  yum: pkg=http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm state=present
+
+- name: Install Percona Server
+  yum: pkg={{ item }} state=present
+  with_items:
+    - Percona-Server-server-57
+    - Percona-Server-client-57
+
+- name: Start and enable Percona Server
+  service: name=mysqld enabled=yes state=started

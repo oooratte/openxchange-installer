@@ -1,0 +1,4 @@
+#!/bin/sh
+
+/usr/sbin/dehydrated -c -k /etc/letsencrypt/hooks.sh
+

@@ -1,0 +1,29 @@
+---
+- name: Install Apache
+  yum: pkg={{ item }} state=present
+  with_items:
+    - httpd
+    - mod_ssl
+
+- name: Put apache user in sslcerts group
+  user: name=apache append=yes groups=sslcerts
+
+- name: Check for letsencrypt.conf
+  stat: path=/etc/httpd/conf.d/letsencrypt.conf
+  register: le
+
+- name: Prepare httpd for Let's Encrypt client
+  copy: src=letsencrypt.conf dest=/etc/httpd/conf.d/letsencrypt.conf
+  notify: restart httpd
+
+- name: Restart Httpd
+  service: name=httpd state=restarted
+  when: le.stat.exists == False
+
+- name: Request SSL certificate
+  command: /usr/sbin/dehydrated -c -k /etc/letsencrypt/hooks.sh
+  when: le.stat.exists == False
+
+- name: Configure vhost
+  template: src=ox.conf dest=/etc/httpd/conf.d/ox.conf
+  notify: restart httpd

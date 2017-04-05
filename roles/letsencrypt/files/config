@@ -1,0 +1,2 @@
+WELLKNOWN=/etc/letsencrypt/.acme-challenges
+HOOK=/etc/letsencrypt/hooks.sh

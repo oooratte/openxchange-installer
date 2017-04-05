@@ -1,0 +1,3 @@
+credentials
+hosts
+host_vars/all.yml.dist

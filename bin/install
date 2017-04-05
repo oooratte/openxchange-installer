@@ -1,0 +1,19 @@
+#!/bin/bash
+
+base="`dirname $(readlink -f $0)`/.."
+
+if [ -f ~/.ssh/id_rsa ]; then
+	echo "Using ~/.ssh/id_rsa for SSH pubkey authentication"
+else
+	echo "~/.ssh/id_rsa not found. Quitting."
+	exit 1
+fi
+
+if [ ! -f ${base}/hosts ]; then
+	echo "Copy hosts.dist to hosts and edit to your needs"
+	exit 1
+fi
+
+docker run -it --rm -v $base/ansible.cfg:/etc/ansible/ansible.cfg -v $base/credentials:/etc/ansible/credentials -v $base/roles:/etc/ansible/roles -v $base/host_vars:/etc/ansible/host_vars -v $base/playbook.yml:/playbook.yml -v $base/hosts:/etc/ansible/hosts -v /etc/resolv.conf:/etc/resolv.conf -v ~/.ssh/id_rsa:/etc/ansible/id_rsa verwilst/ansible ansible-playbook /playbook.yml
+
+sudo chown `id -un`: $base/credentials -R
