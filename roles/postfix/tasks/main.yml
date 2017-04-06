@@ -22,5 +22,13 @@
   template: src=main.cf dest=/etc/postfix/main.cf
   notify: restart postfix
 
+- name: Configure MySQL connections 
+  template: src={{ item }} dest=/etc/postfix/{{ item }}
+  with_items:
+    - mysql-virtual-mailbox-domains.cf
+    - mysql-virtual-mailbox-maps.cf
+    - mysql-virtual-alias-maps.cf
+  notify: restart postfix
+
 - name: Start and enable Postfix
   service: name=postfix enabled=yes state=started

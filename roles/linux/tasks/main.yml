@@ -8,3 +8,14 @@
 - name: Add SSLCerts group
   group: name=sslcerts system=yes state=present
 
+- name: Add group vmail
+  group: name=vmail gid=5000
+
+- name: Add user vmail
+  user: name=vmail comment="vMail" uid=5000 group=vmail shell=/bin/sh home=/var/vmail
+
+- name: Setup vmail homedir
+  file: path=/var/vmail owner=vmail group=vmail mode=0750 state=directory
+
+- name: Create /usr/share/vmail
+  file: path=/usr/share/vmail owner=root group=root mode=0755 state=directory

@@ -8,3 +8,15 @@
 
 - name: Start and enable Dovecot
   service: name=dovecot enabled=yes state=started
+
+- name: Configuration files
+  template: src={{ item }} dest=/etc/dovecot/{{ item }}
+  with_items:
+    - dovecot.conf
+    - dovecot-sql.conf.ext
+    - conf.d/auth-sql.conf.ext
+    - conf.d/10-auth.conf
+    - conf.d/10-mail.conf
+    - conf.d/10-ssl.conf
+    - conf.d/10-master.conf
+  notify: restart dovecot

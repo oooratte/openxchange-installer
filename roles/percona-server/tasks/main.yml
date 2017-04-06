@@ -7,6 +7,52 @@
   with_items:
     - Percona-Server-server-57
     - Percona-Server-client-57
+    - MySQL-python
+
+- name: Generate MySQL passwords
+  set_fact:
+    mysql_root_password: "{{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/root length=32') }}"
+    mysql_vmail_password: "{{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/vmail length=32') }}"
 
 - name: Start and enable Percona Server
   service: name=mysqld enabled=yes state=started
+
+- name: Check MySQL connection
+  command: mysql -uroot -e "select version()"
+  register: mysql_conn
+  ignore_errors: True
+  changed_when: False
+
+- name: Get MySQL generated root password
+  shell: grep "A temporary password is generated for" /var/log/mysqld.log | awk '{print $NF}'
+  register: temp_password
+  when: mysql_conn.rc != 0
+
+- debug: msg={{ temp_password.stdout }}
+  when: mysql_conn.rc != 0
+
+- command: mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ mysql_root_password }}'" -p'{{ temp_password.stdout }}' --connect-expired-password
+  when: mysql_conn.rc != 0
+
+- command: mysql -uroot -e "INSTALL PLUGIN auth_socket SONAME 'auth_socket.so'" -p'{{ mysql_root_password }}'
+  when: mysql_conn.rc != 0
+
+- name: Set /root/.my.cfg
+  ini_file: dest="/root/.my.cnf" section=client option="{{ item[0] }}" value="{{ item[1] }}" create=yes
+  with_list:
+    - [ 'user', 'root' ]
+    - [ 'password', "{{ mysql_root_password }}" ]
+
+- name: Add vmail database
+  mysql_db: name="vmail"
+
+- name: Add vmail user
+  mysql_user: name="vmail" password="{{ mysql_vmail_password }}" priv="vmail.*:SELECT"
+
+- name: Add schema.sql
+  copy: src=schema.sql dest=/usr/share/vmail/schema.sql
+
+- name: Import schema for mail db
+  shell: cat /usr/share/vmail/schema.sql | mysql vmail
+  args:
+    creates: /var/lib/mysql/vmail/domains.frm

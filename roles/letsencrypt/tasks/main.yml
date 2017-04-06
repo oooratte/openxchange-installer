@@ -44,7 +44,7 @@
   copy: src=hooks.sh dest=/etc/letsencrypt/hooks.sh mode=0750 owner=root group=root
 
 - name: Add FQDN to domains.txt
-  lineinfile: dest=/etc/letsencrypt/domains.txt line={{ fqdn }}
+  lineinfile: dest=/etc/letsencrypt/domains.txt line={{ inventory_hostname }}
 
 - name: Register client and accept terms
   command: /usr/sbin/dehydrated --accept-terms --register creates=/etc/letsencrypt/accounts

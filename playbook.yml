@@ -1,6 +1,5 @@
 ---
 - hosts: all
   roles:
-  - postfix
-  #- open-xchange
+    - open-xchange
 
