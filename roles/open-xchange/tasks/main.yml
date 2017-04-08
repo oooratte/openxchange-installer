@@ -1,0 +1,86 @@
+---
+- name: Generate passwords
+  set_fact:
+    mysql_openexchange_password: "{{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/openexchange length=32') }}"
+    openxchange_oxadminmaster_password: "{{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/openxchange/oxadminmaster length=32') }}"
+
+- name: Enable OX Yum repository
+  copy: src=yum.repo dest=/etc/yum.repos.d/ox.repo owner=root group=root mode=0644 
+
+- name: Install OpenXchange server
+  yum: pkg={{ item }} state=present
+  with_items:
+    - open-xchange 
+    - open-xchange-authentication-database
+    - open-xchange-grizzly
+    - open-xchange-admin
+    - open-xchange-appsuite
+    - open-xchange-appsuite-backend
+    - open-xchange-appsuite-manifest
+    - open-xchange-dav
+    - open-xchange-push-dovecot
+    - open-xchange-unifiedmail
+    - open-xchange-passwordchange-database
+    - open-xchange-spamhandler-spamassassin 
+    - open-xchange-mailfilter
+
+- name: Create mysql database and users
+  command: "/opt/open-xchange/sbin/initconfigdb --configdb-pass='{{ mysql_openexchange_password }}' -a"
+  args:
+    creates: /var/lib/mysql/configdb
+
+- name: Check wether oxinstaller has been run before
+  shell: grep SERVER_NAME={{ inventory_hostname }} /opt/open-xchange/etc/system.properties || exit 0
+  register: oxinstall
+  changed_when: False
+
+- name: Run oxinstaller
+  command: >
+    /opt/open-xchange/sbin/oxinstaller --no-license --servername="{{ inventory_hostname }}"
+    --configdb-pass="{{ mysql_openexchange_password }}" --master-pass="{{ openxchange_oxadminmaster_password }}"
+    --network-listener-host=localhost --servermemory {{ openxchange_java_max_memory }}
+  when: oxinstall.stdout.find('SERVER_NAME') != 0
+
+- name: Configure mail.properties
+  lineinfile: dest=/opt/open-xchange/etc/mail.properties regexp="{{ item.key }}=" line="{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: 'com.openexchange.mail.loginSource', value: 'mail' }
+    - { key: 'com.openexchange.mail.mailServerSource', value: 'global' }
+    - { key: 'com.openexchange.mail.transportServerSource', value: 'global' }
+
+- name: Start and enable Open-xchange
+  service: name=open-xchange enabled=yes state=started
+
+- name: Check server registration status
+  shell: mysql configdb -e "select * from server where name = '{{ inventory_hostname }}'"
+  register: regcheck
+  changed_when: False
+
+- name: Register server
+  command: /opt/open-xchange/sbin/registerserver -n "{{ inventory_hostname }}" -A oxadminmaster -P "{{ openxchange_oxadminmaster_password }}"
+  when: regcheck.stdout == ""
+
+- name: Create /var/opt/filestore
+  file: path=/var/opt/filestore state=directory owner=open-xchange group=open-xchange mode=0750
+
+- name: Check filestore registration status
+  shell: mysql configdb -e "select * from filestore where uri = 'file:/var/opt/filestore'"
+  register: regcheck
+  changed_when: False
+
+- name: Register filestore
+  command: >
+    /opt/open-xchange/sbin/registerfilestore -A oxadminmaster -P "{{ openxchange_oxadminmaster_password }}"
+    -t file:/var/opt/filestore -s 1000000
+  when: regcheck.stdout == ""
+
+- name: Check database registration status
+  shell: mysql configdb -e "select * from db_pool where name = 'oxdatabase'"
+  register: regcheck
+  changed_when: False
+
+- name: Register database
+  command: >
+    /opt/open-xchange/sbin/registerdatabase -A oxadminmaster -P "{{ openxchange_oxadminmaster_password }}"
+    -n oxdatabase -p "{{ mysql_openexchange_password }}" -m true
+  when: regcheck.stdout == ""

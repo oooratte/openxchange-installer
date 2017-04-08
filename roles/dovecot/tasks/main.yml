@@ -19,4 +19,5 @@
     - conf.d/10-mail.conf
     - conf.d/10-ssl.conf
     - conf.d/10-master.conf
+    - conf.d/20-managesieve.conf
   notify: restart dovecot
