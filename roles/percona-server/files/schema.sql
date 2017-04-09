@@ -8,7 +8,6 @@ CREATE TABLE `users` (
 	  `id` int(11) unsigned NOT NULL auto_increment,
 	  `domain_id` int(11) unsigned NOT NULL,
 	  `email` varchar(128) NOT NULL,
-	  `password` varchar(128) NOT NULL,
 	  `active` tinyint(1) unsigned NOT NULL DEFAULT 1,
 	  PRIMARY KEY (`id`),
 	  UNIQUE KEY `email` (`email`),
