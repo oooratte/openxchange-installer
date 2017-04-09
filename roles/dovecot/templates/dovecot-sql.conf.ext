@@ -68,14 +68,14 @@ driver = mysql
 #   connect = host=sql.example.com dbname=virtual user=virtual password=blarg
 #   connect = /etc/dovecot/authdb.sqlite
 #
-connect = host=127.0.0.1 dbname=vmail user=vmail password={{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/vmail length=32') }}
+connect = host=127.0.0.1 dbname=oxdatabase_5 user=vmail password={{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/vmail length=32') }}
 
 # Default password scheme.
 #
 # List of supported schemes is in
 # http://wiki2.dovecot.org/Authentication/PasswordSchemes
 #
-default_pass_scheme = SHA512-CRYPT
+default_pass_scheme = SHA
 
 # passdb query to retrieve the password. It can return fields:
 #   password - The user's password. This field must be returned.
@@ -105,9 +105,8 @@ default_pass_scheme = SHA512-CRYPT
 #     FROM users WHERE userid = '%u' AND active = 'Y'
 #
 password_query = \
-  SELECT email as user, password \
-  FROM users WHERE email = '%u' AND active = 1
-
+  SELECT mail as user, userPassword as password \
+  FROM user where mail = '%u' and mailEnabled = 1
 # userdb query to retrieve the user information. It can return fields:
 #   uid - System UID (overrides mail_uid setting)
 #   gid - System GID (overrides mail_gid setting)
