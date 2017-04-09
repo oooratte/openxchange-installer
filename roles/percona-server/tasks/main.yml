@@ -48,10 +48,7 @@
   mysql_db: name="vmail"
 
 - name: Add vmail user
-  mysql_user: name="vmail" password="{{ mysql_vmail_password }}" priv="vmail.*:SELECT"
-
-- name: Add pwchange user
-  mysql_user: name="pwchange" password="{{ mysql_pwchange_password }}" priv="vmail.users:SELECT,UPDATE/oxdatabase_5.user:SELECT"
+  mysql_user: name="vmail" password="{{ mysql_vmail_password }}" priv="vmail.*:SELECT/oxdatabase_5.user:SELECT"
 
 - name: Add schema.sql
   copy: src=schema.sql dest=/usr/share/vmail/schema.sql
