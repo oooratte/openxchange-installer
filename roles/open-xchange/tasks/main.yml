@@ -1,14 +1,27 @@
 ---
 - name: Generate passwords
   set_fact:
-    mysql_openexchange_password: "{{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/openexchange length=32') }}"
-    openxchange_oxadminmaster_password: "{{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/openxchange/oxadminmaster length=32') }}"
+    mysql_ox_password: "{{ lookup('password', '../credentials/percona-server/ox length=32') }}"
+    ox_oxadminmaster_password: "{{ lookup('password', '../credentials/openxchange/oxadminmaster length=32') }}"
 
-- name: Enable OX Yum repository
-  copy: src=yum.repo dest=/etc/yum.repos.d/ox.repo owner=root group=root mode=0644 
+- name: Enable OX repository
+  copy: 
+    content: |
+      deb http://software.open-xchange.com/products/appsuite/stable/appsuiteui/DebianJessie/ /
+      deb http://software.open-xchange.com/products/appsuite/stable/backend/DebianJessie/ /
+    dest: /etc/apt/sources.list.d/open-xchange.list 
+    owner: root
+    group: root
+    mode: 0644 
+
+- name: Import repository GPG key
+  shell: wget http://software.open-xchange.com/oxbuildkey.pub -O - | apt-key add -
 
 - name: Install OpenXchange server
-  yum: pkg={{ item }} state=present
+  apt: 
+    name: "{{ item }}" 
+    state: present
+    update_cache: yes
   with_items:
     - open-xchange 
     - open-xchange-authentication-database
@@ -21,24 +34,24 @@
     - open-xchange-push-dovecot
     - open-xchange-unifiedmail
     - open-xchange-passwordchange-database
-    - open-xchange-spamhandler-spamassassin 
+    #- open-xchange-spamhandler-spamassassin 
     - open-xchange-mailfilter
 
 - name: Create mysql database and users
-  command: "/opt/open-xchange/sbin/initconfigdb --configdb-pass='{{ mysql_openexchange_password }}' -a"
+  command: "/opt/open-xchange/sbin/initconfigdb --configdb-pass='{{ mysql_ox_password }}' -a"
   args:
     creates: /var/lib/mysql/configdb
 
 - name: Check wether oxinstaller has been run before
-  shell: grep SERVER_NAME={{ inventory_hostname }} /opt/open-xchange/etc/system.properties || exit 0
+  shell: grep SERVER_NAME={{ ox_hostname }} /opt/open-xchange/etc/system.properties || exit 0
   register: oxinstall
   changed_when: False
 
 - name: Run oxinstaller
   command: >
-    /opt/open-xchange/sbin/oxinstaller --no-license --servername="{{ inventory_hostname }}"
-    --configdb-pass="{{ mysql_openexchange_password }}" --master-pass="{{ openxchange_oxadminmaster_password }}"
-    --network-listener-host=localhost --servermemory {{ openxchange_java_max_memory }}
+    /opt/open-xchange/sbin/oxinstaller --no-license --servername="{{ ox_hostname }}"
+    --configdb-pass="{{ mysql_ox_password }}" --master-pass="{{ ox_oxadminmaster_password }}"
+    --network-listener-host=localhost --servermemory {{ ox_java_max_memory }}
   when: oxinstall.stdout.find('SERVER_NAME') != 0
 
 - name: Configure mail.properties
@@ -52,12 +65,16 @@
   service: name=open-xchange enabled=yes state=started
 
 - name: Check server registration status
-  shell: mysql configdb -e "select * from server where name = '{{ inventory_hostname }}'"
+  shell: mysql configdb -e "select * from server where name = '{{ ox_hostname }}'"
   register: regcheck
   changed_when: False
 
+- name: Allow server to start
+  command: sleep 5
+  when: regcheck.stdout == ""
+
 - name: Register server
-  command: /opt/open-xchange/sbin/registerserver -n "{{ inventory_hostname }}" -A oxadminmaster -P "{{ openxchange_oxadminmaster_password }}"
+  command: /opt/open-xchange/sbin/registerserver -n "{{ ox_hostname }}" -A oxadminmaster -P "{{ ox_oxadminmaster_password }}"
   when: regcheck.stdout == ""
 
 - name: Create /var/opt/filestore
@@ -70,7 +87,7 @@
 
 - name: Register filestore
   command: >
-    /opt/open-xchange/sbin/registerfilestore -A oxadminmaster -P "{{ openxchange_oxadminmaster_password }}"
+    /opt/open-xchange/sbin/registerfilestore -A oxadminmaster -P "{{ ox_oxadminmaster_password }}"
     -t file:/var/opt/filestore -s 1000000
   when: regcheck.stdout == ""
 
@@ -81,6 +98,6 @@
 
 - name: Register database
   command: >
-    /opt/open-xchange/sbin/registerdatabase -A oxadminmaster -P "{{ openxchange_oxadminmaster_password }}"
-    -n oxdatabase -p "{{ mysql_openexchange_password }}" -m true
+    /opt/open-xchange/sbin/registerdatabase -A oxadminmaster -P "{{ ox_oxadminmaster_password }}"
+    -n oxdatabase -p "{{ mysql_ox_password }}" -m true
   when: regcheck.stdout == ""

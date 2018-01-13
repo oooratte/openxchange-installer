@@ -1,6 +1,0 @@
----
-dependencies:
-#  - { role: dovecot }
-#  - { role: postfix }
-#  - { role: percona-server }
-#  - { role: apache }

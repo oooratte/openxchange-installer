@@ -1,29 +1,35 @@
 ---
 - name: Install Apache
-  yum: pkg={{ item }} state=present
+  apt: name={{ item }} state=present
   with_items:
-    - httpd
-    - mod_ssl
+    - apache2
 
-- name: Put apache user in sslcerts group
-  user: name=apache append=yes groups=sslcerts
-
-- name: Check for letsencrypt.conf
-  stat: path=/etc/httpd/conf.d/letsencrypt.conf
-  register: le
+- name: Put www-data user in sslcerts group
+  user: name=www-data append=yes groups=ssl-cert
 
 - name: Prepare httpd for Let's Encrypt client
-  copy: src=letsencrypt.conf dest=/etc/httpd/conf.d/letsencrypt.conf
-  notify: restart httpd
+  copy: src=letsencrypt.conf dest=/etc/apache2/conf-available/letsencrypt.conf
+  notify: restart apache2
 
-- name: Restart Httpd
-  service: name=httpd state=restarted
-  when: le.stat.exists == False
-
-- name: Request SSL certificate
-  command: /usr/sbin/dehydrated -c -k /etc/letsencrypt/hooks.sh
-  when: le.stat.exists == False
+- name: Enable letsencrypt.conf
+  file:
+    src: /etc/apache2/conf-available/letsencrypt.conf
+    dest: /etc/apache2/conf-enabled/letsencrypt.conf
+    state: link
+  notify: restart apache2
 
 - name: Configure vhost
-  template: src=ox.conf dest=/etc/httpd/conf.d/ox.conf
-  notify: restart httpd
+  template: src=ox.conf dest=/etc/apache2/sites-available/ox.conf
+  notify: restart apache2
+
+- name: Enable ox vhost
+  file:
+    src: /etc/apache2/sites-available/ox.conf
+    dest: /etc/apache2/sites-enabled/ox.conf
+    state: link
+  notify: restart apache2
+
+- name: Enable apache2 modules
+  command: a2enmod ssl headers expires rewrite
+  notify: restart apache2
+  

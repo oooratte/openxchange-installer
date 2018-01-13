@@ -6,7 +6,7 @@
   apt: 
     name: "{{ item }}"
     state: latest
-    update_cache: yes
+    cache_update: yes
   with_items:
     - percona-server-server-5.7
     - python-mysqldb

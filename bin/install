@@ -49,3 +49,4 @@ fi
 /var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/percona-server.yml
 /var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/postfix.yml
 /var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/dovecot.yml
+/var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/ox.yml
