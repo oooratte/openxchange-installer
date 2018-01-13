@@ -68,7 +68,7 @@ driver = mysql
 #   connect = host=sql.example.com dbname=virtual user=virtual password=blarg
 #   connect = /etc/dovecot/authdb.sqlite
 #
-connect = host=127.0.0.1 dbname=oxdatabase_5 user=vmail password={{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/vmail length=32') }}
+connect = host=127.0.0.1 dbname=oxdatabase_5 user=vmail password={{ lookup('password', '../credentials/percona-server/vmail length=32') }}
 
 # Default password scheme.
 #

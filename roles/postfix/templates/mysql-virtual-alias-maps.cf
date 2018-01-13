@@ -1,5 +1,5 @@
 user = vmail
-password = {{ lookup('password', '/etc/ansible/credentials/' + inventory_hostname + '/percona-server/vmail length=32') }}
+password = {{ lookup('password', '../credentials/percona-server/vmail length=32') }}
 hosts = 127.0.0.1
 dbname = vmail
 query = SELECT destination FROM aliases WHERE source='%s'

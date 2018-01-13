@@ -2,18 +2,50 @@
 
 base="`dirname $(readlink -f $0)`/.."
 
-if [ -f ~/.ssh/id_rsa ]; then
-	echo "Using ~/.ssh/id_rsa for SSH pubkey authentication"
+test -f "${base}/.vars" && source "${base}/.vars"
+
+if [ ! -x /usr/bin/whiptail ]; then
+	apt-get -y install whiptail
+fi
+
+ox_hostname=$(whiptail --inputbox "\nPlease enter the external hostname (eg. ox.example.com )" 0 0 --title "Server hostname" 3>&1 1>&2 2>&3)
+if [ $? -ne 0 ]; then echo "Canceled."; exit; fi
+echo "ox_hostname: $ox_hostname" > "${base}/host_vars/localhost"
+
+ox_letsencrypt=yes
+ox_ssl_cert="/etc/letsencrypt/certs/${ox_hostname}/fullchain.pem"
+ox_ssl_key="/etc/letsencrypt/certs/${ox_hostname}/privkey.pem"
+whiptail --yesno "Manage domain $ox_hostname with Let's Encrypt?" 0 0 --title "Let's Encrypt" 3>&1 1>&2 2>&3
+if [ $? -ne 0 ]; then 
+	ox_letsencrypt=no
 else
-	echo "~/.ssh/id_rsa not found. Quitting."
-	exit 1
+	echo "ox_ssl_cert: $ox_ssl_cert" >> "${base}/host_vars/localhost"
+	echo "ox_ssl_key: $ox_ssl_key" >> "${base}/host_vars/localhost"
+fi
+echo "ox_letsencrypt: $ox_letsencrypt" >> "${base}/host_vars/localhost"
+
+if [ ! -x /usr/bin/virtualenv ]; then
+	echo "Installing python-virtualenv."
+	apt-get -f install python-virtualenv
 fi
 
-if [ ! -f ${base}/hosts ]; then
-	echo "Copy hosts.dist to hosts and edit to your needs"
-	exit 1
+# Install Ansible if not yet installed
+if [ ! -x /var/tmp/oxtastic/bin/ansible ]; then
+	python -m virtualenv /var/tmp/oxtastic
+	/var/tmp/oxtastic/bin/pip install ansible
 fi
 
-docker run -it --rm -v $base/ansible.cfg:/etc/ansible/ansible.cfg -v $base/credentials:/etc/ansible/credentials -v $base/roles:/etc/ansible/roles -v $base/group_vars:/etc/ansible/group_vars -v $base/playbook.yml:/playbook.yml -v $base/hosts:/etc/ansible/hosts -v /etc/resolv.conf:/etc/resolv.conf -v ~/.ssh/id_rsa:/etc/ansible/id_rsa verwilst/ansible ansible-playbook /playbook.yml
+ln -sf "${base}/roles" ""${base}/playbooks/roles""
 
-sudo chown `id -un`: $base/credentials -R
+ANSIBLE_CONFIG="${base}/ansible.cfg"
+ANSIBLE_ROLES_PATH="${base}/roles"
+
+/var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/common.yml
+
+if [[ "$ox_letsencrypt" == "yes" ]]; then
+	/var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/letsencrypt.yml
+fi
+
+/var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/percona-server.yml
+/var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/postfix.yml
+/var/tmp/oxtastic/bin/ansible-playbook -i "${base}/hosts" playbooks/dovecot.yml

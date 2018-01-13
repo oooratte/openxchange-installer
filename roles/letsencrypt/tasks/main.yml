@@ -20,7 +20,7 @@
     - /etc/letsencrypt/hooks.d/exit_hook
 
 - name: Create directory /etc/letsencrypt/certs
-  file: path=/etc/letsencrypt/certs state=directory mode=0750 group=sslcerts owner=root
+  file: path=/etc/letsencrypt/certs state=directory mode=0750 group=ssl-cert owner=root
 
 - name: Link docs directory to /etc/letsencrypt/docs
   file: src=/usr/src/dehydrated-{{ letsencrypt_version }} dest=/etc/letsencrypt/docs state=link
@@ -44,7 +44,10 @@
   copy: src=hooks.sh dest=/etc/letsencrypt/hooks.sh mode=0750 owner=root group=root
 
 - name: Add FQDN to domains.txt
-  lineinfile: dest=/etc/letsencrypt/domains.txt line={{ inventory_hostname }}
+  lineinfile: dest=/etc/letsencrypt/domains.txt line={{ ox_hostname }}
 
 - name: Register client and accept terms
   command: /usr/sbin/dehydrated --accept-terms --register creates=/etc/letsencrypt/accounts
+
+#- name: Creating certificate
+#  command: /usr/sbin/dehydrated

@@ -1,6 +1,6 @@
-myhostname = {{ inventory_hostname }}
-myorigin = {{ inventory_hostname }}
-mydestination = {{ inventory_hostname }}, localhost, localhost.localdomain
+myhostname = {{ ox_hostname }}
+myorigin = {{ ox_hostname }}
+mydestination = {{ ox_hostname }}, localhost, localhost.localdomain
 relayhost =
 mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
 mailbox_size_limit = 0
@@ -13,8 +13,8 @@ virtual_mailbox_domains = proxy:mysql:/etc/postfix/mysql-virtual-mailbox-domains
 virtual_mailbox_maps = proxy:mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf
 virtual_alias_maps = proxy:mysql:/etc/postfix/mysql-virtual-alias-maps.cf
 
-smtpd_tls_cert_file=/etc/letsencrypt/certs/{{ inventory_hostname }}/fullchain.pem
-smtpd_tls_key_file=/etc/letsencrypt/certs/{{ inventory_hostname }}/privkey.pem
+smtpd_tls_cert_file=/etc/letsencrypt/certs/{{ ox_hostname }}/fullchain.pem
+smtpd_tls_key_file=/etc/letsencrypt/certs/{{ ox_hostname }}/privkey.pem
 smtpd_use_tls=yes
 smtpd_tls_security_level=may
 smtpd_tls_protocols = !SSLv2, !SSLv3

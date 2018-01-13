@@ -1,18 +1,17 @@
 ---
 - name: Install Dovecot
-  yum: pkg={{ item }} state=present
+  apt: pkg={{ item }} state=present
   with_items:
-    - dovecot
-    - dovecot-pigeonhole
+    - dovecot-imapd
+    - dovecot-pop3d
     - dovecot-mysql
-
-- name: Start and enable Dovecot
-  service: name=dovecot enabled=yes state=started
+    - dovecot-sieve
+    - dovecot-managesieved
+    - dovecot-antispam
 
 - name: Configuration files
   template: src={{ item }} dest=/etc/dovecot/{{ item }}
   with_items:
-    - dovecot.conf
     - dovecot-sql.conf.ext
     - conf.d/auth-sql.conf.ext
     - conf.d/10-auth.conf
@@ -21,3 +20,7 @@
     - conf.d/10-master.conf
     - conf.d/20-managesieve.conf
   notify: restart dovecot
+
+- name: Start and enable Dovecot
+  service: name=dovecot enabled=yes state=started
+
