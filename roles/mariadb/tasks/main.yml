@@ -1,0 +1,37 @@
+---
+- name: Install mariadb server
+  become: True
+  apt: 
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  with_items:
+    - mariadb-server
+    - python-mysqldb
+
+- name: Generate MySQL passwords
+  set_fact:
+    mysql_root_password: "{{ lookup('password', '../credentials/percona-server/root length=32') }}"
+    mysql_vmail_password: "{{ lookup('password', '../credentials/percona-server/vmail length=32') }}"
+#    mysql_pwchange_password: "{{ lookup('password', 'credentials/percona-server/pwchange length=32') }}"
+
+- name: Start and enable MariaDB Server
+  service: name=mysql enabled=yes state=started
+
+- name: Add vmail database
+  mysql_db: name="vmail"
+
+- name: Add oxdatabase_5 database
+  mysql_db: name="oxdatabase_5"
+
+- name: Add vmail user
+#  mysql_user: name="vmail" password="{{ mysql_vmail_password }}" priv="vmail.*:SELECT/oxdatabase_5.user:SELECT"
+  mysql_user: name="vmail" password="{{ mysql_vmail_password }}" priv="vmail.*:SELECT"
+
+- name: Add schema.sql
+  copy: src=schema.sql dest=/usr/share/oxtastic/schema.sql
+
+- name: Import schema for mail db
+  shell: cat /usr/share/oxtastic/schema.sql | mysql vmail
+  args:
+    creates: /var/lib/mysql/vmail/domains.frm

@@ -1,10 +1,13 @@
 ---
 - name: Generate passwords
+  become: True
+  become_method: sudo
   set_fact:
     mysql_ox_password: "{{ lookup('password', '../credentials/percona-server/ox length=32') }}"
     ox_oxadminmaster_password: "{{ lookup('password', '../credentials/openxchange/oxadminmaster length=32') }}"
 
 - name: Enable OX repository
+  become: True
   copy: 
     content: |
       deb http://software.open-xchange.com/products/appsuite/stable/appsuiteui/DebianJessie/ /
@@ -15,9 +18,13 @@
     mode: 0644 
 
 - name: Import repository GPG key
-  shell: wget http://software.open-xchange.com/oxbuildkey.pub -O - | apt-key add -
+  become: True
+  apt_key:
+    url: http://software.open-xchange.com/oxbuildkey.pub
+    state: present
 
 - name: Install OpenXchange server
+  become: True
   apt: 
     name: "{{ item }}" 
     state: present
@@ -38,6 +45,7 @@
     - open-xchange-mailfilter
 
 - name: Create mysql database and users
+  become: True
   command: "/opt/open-xchange/sbin/initconfigdb --configdb-pass='{{ mysql_ox_password }}' -a"
   args:
     creates: /var/lib/mysql/configdb
@@ -48,6 +56,7 @@
   changed_when: False
 
 - name: Run oxinstaller
+  become: True
   command: >
     /opt/open-xchange/sbin/oxinstaller --no-license --servername="{{ ox_hostname }}"
     --configdb-pass="{{ mysql_ox_password }}" --master-pass="{{ ox_oxadminmaster_password }}"
@@ -62,6 +71,7 @@
     - { key: 'com.openexchange.mail.transportServerSource', value: 'global' }
 
 - name: Start and enable Open-xchange
+  become: True
   service: name=open-xchange enabled=yes state=started
 
 - name: Check server registration status
@@ -74,10 +84,12 @@
   when: regcheck.stdout == ""
 
 - name: Register server
+  become: True
   command: /opt/open-xchange/sbin/registerserver -n "{{ ox_hostname }}" -A oxadminmaster -P "{{ ox_oxadminmaster_password }}"
   when: regcheck.stdout == ""
 
 - name: Create /var/opt/filestore
+  become: True
   file: path=/var/opt/filestore state=directory owner=open-xchange group=open-xchange mode=0750
 
 - name: Check filestore registration status
@@ -86,6 +98,7 @@
   changed_when: False
 
 - name: Register filestore
+  become: True
   command: >
     /opt/open-xchange/sbin/registerfilestore -A oxadminmaster -P "{{ ox_oxadminmaster_password }}"
     -t file:/var/opt/filestore -s 1000000
@@ -97,6 +110,7 @@
   changed_when: False
 
 - name: Register database
+  become: True
   command: >
     /opt/open-xchange/sbin/registerdatabase -A oxadminmaster -P "{{ ox_oxadminmaster_password }}"
     -n oxdatabase -p "{{ mysql_ox_password }}" -m true

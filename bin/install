@@ -31,7 +31,7 @@ fi
 
 # Install Ansible if not yet installed
 if [ ! -x /var/tmp/oxtastic/bin/ansible ]; then
-	python -m virtualenv /var/tmp/oxtastic
+	virtualenv /var/tmp/oxtastic
 	/var/tmp/oxtastic/bin/pip install ansible
 fi
 
